@@ -1,204 +1,247 @@
-import java.awt.*;
-import java.awt.event.*;
-import javax.swing.*;
+import java.io.*;
+import java.util.Set;
+import java.util.TreeSet;
 
 /*
-	This serves as an entry point for interacting with the Game
+A complete representation of the Gomoku
 */
 
-public class Gomoku extends JPanel {
-	
-  private Game myGame;
-  private JButton undoButton;  
-  private JButton restartButton;
-  private JRadioButton humanhuman;
-  private JRadioButton humancomputer;
-  private ButtonGroup modeGroup;
-  private JLabel message;
-  private boolean mode;
+public class Gomoku {
+    public int index;  // indexes how many moves have occurred.  0 to 255, with X on evens
+    public int[][][] gamegraph; //a spacetime representation of the Gomoku
+    public boolean turn;  // false = X's turn;  true = O's turn;
+    public boolean over;
+    public Set<Coordinate> blackthreatspace;
+    public Set<Coordinate> whitethreatspace;
 
-	public static void main (String[] args) {
-    JFrame window = new JFrame("Five in a Row");
-    Dimension monitorsize = Toolkit.getDefaultToolkit().getScreenSize();
-    window.setLocation(monitorsize.width/3, monitorsize.height/4 );
-    window.setDefaultCloseOperation( JFrame.EXIT_ON_CLOSE );
-    window.setResizable(true);  
-    window.setVisible(true);
-    Gomoku content = new Gomoku(monitorsize);
-    window.setContentPane(content);
-    window.pack();
-  }
-	
-  public Gomoku(Dimension monitorsize){
-		mode = false;
-    myGame = new Game();
-    setLayout(null);
-    setPreferredSize(new Dimension(monitorsize.width/2,2*monitorsize.height/3) );
-    setBackground(new Color(150,140,200));
-      
-        // Create the components and add them to the applet. 
-        //Game myGame = new Game();
-        Board board = new Board();  // Note: The constructor for the
-                                  //   board also creates the buttons
-                                  //   and label.
+    
+    /* Logic for determining if a move has transpired.  Checks all directions recursively */
+    public boolean bIsWin(Coordinate C) {
+        System.out.format("From Gomoku %d, %d%n", C.x,C.y);
+        int U, D, L, R, RU, LU, RD, LD = 1;
+        U =checkU(C,1);
+        RU =checkRU(C,1);
+        R=checkR(C,1);
+        RD=checkRD(C,1);
+        D=checkD(C,1);
+        LD=checkLD(C,1);
+        L=checkL(C,1);
+        LU=checkLU(C,1);
+        if((U+D)==6) {
+            //System.out.println("Up down wins");
+            return true;
+        }
+        if((RU+LD)==6) {
+            //System.out.println("Oregon Florida diag wins");
+            return true;
+        }
+        if((R+L)==6) {
+            //System.out.println("Leftright wins");
+            return true;
+        }
+        if((RD+LU)==6) {
+            //System.out.println("Maine Arizona diag wins");
+            return true;
+        }
+        // System.out.println("U:" +U );
+        // System.out.println("RU:"+RU);
+        // System.out.println("R:"+R);
+        // System.out.println("RD:"+RD);
+        // System.out.println("D:"+D);
+        // System.out.println("LD:"+LD);
+        // System.out.println("L:"+L);
+        // System.out.println("LU:"+LU);
+        return false;
         
-        add(board);         //game has 6 components
-        add(undoButton);
-        add(restartButton);
-        add(message);
-        add(humanhuman);
-        add(humancomputer);
-        modeGroup.add(humanhuman);
-        modeGroup.add(humancomputer);
-       
-        /* Set the position and size of each component by calling
-        its setBounds() method. 
-        */ 
-        board.setBounds(0,0,300,300);
-        undoButton.setBounds(560, 380, 100, 30);
-        restartButton.setBounds(560, 440, 100, 30);
-        humanhuman.setBounds(300, 400, 200, 30);
-        humancomputer.setBounds(300, 440, 200, 30);
-        message.setBounds(460, 200, 350, 30);
-	} // end gomoku constructor
-    private class Board extends JPanel implements ActionListener, MouseListener {
-        Board() {
+    }
+    public int checkU(Coordinate C, int n){
+        if(C.y+n>=15) return n;
+        if(gamegraph[C.x][C.y+n][index]==gamegraph[C.x][C.y][index]) {
+            
+            return checkU(C, n+1);
+        }
+        return n;
+    }
+    public int checkRU(Coordinate C, int n){
+        if(C.x+n>=15 || C.y+n>=15) return n;
+        if(gamegraph[C.x+n][C.y+n][index]==gamegraph[C.x][C.y][index]) {
+            
+            return checkRU(C, n+1);
+        }
+        
+        return n;
+    }
+    public int checkR(Coordinate C, int n){
+        if(C.x+n>=15) return n;
+        if(gamegraph[C.x+n][C.y][index]==gamegraph[C.x][C.y][index]) {
+            
+            return checkR(C, n+1);
+        }
+        return n;
+    }
+    public int checkRD(Coordinate C, int n){
+        if(C.x+n>=15 || C.y-n<=-1) return n;
+        if(gamegraph[C.x+n][C.y-n][index]==gamegraph[C.x][C.y][index]) {
+            
+            return checkRD(C, n+1);
+        }
+        return n;
+    }
+    public int checkD(Coordinate C, int n){
+        if(C.y-n<=-1) return n;
+        if(gamegraph[C.x][C.y-n][index]==gamegraph[C.x][C.y][index]) {
+            
+            return checkD(C, n+1);
+        }
+        return n;
+    }
+    public int checkLD(Coordinate C, int n){
+        if(C.x-n<=-1 || C.y-n<=-1) return n;
+        if(gamegraph[C.x-n][C.y-n][index]==gamegraph[C.x][C.y][index]) {
 
-       		setBackground(Color.BLACK);
-        	addMouseListener(this);
-        	undoButton = new JButton("Undo");
-        	restartButton = new JButton("Restart");
-          humanhuman = new JRadioButton("Human vs. Human");
-          humancomputer = new JRadioButton("Human vs. Computer");
-          modeGroup = new ButtonGroup();
-        	message = new JLabel("",JLabel.LEFT);
-        	restartButton.addActionListener(this);
-        	undoButton.addActionListener(this);
-          humanhuman.addActionListener(this);
-          humancomputer.addActionListener(this);
-        	message.setFont(new  Font("Serif", Font.BOLD, 14));
-        	message.setForeground(Color.green);
-        	//message.setText("Sample msg");
-	    }
-	    public void actionPerformed(ActionEvent evt) {
-         Object src = evt.getSource();
-         if (src == undoButton) {
-            myGame.undo();
-            repaint();
-          }
-          if (src == restartButton) {
-            myGame = new Game();
-              if (mode==true) {
-              if((int)(Math.random()+.5) == 0) {
-                Coordinate C = new Coordinate();
-                C.x=7;
-                C.y=7;
-                myGame.go(C);
-                //repaint();
-              }
-            }
-            message.setText("");
-            repaint();
-          }
-          if (src == humanhuman) { 
-            System.out.println("hh");
-            mode=false;
-          }
-          if (src == humancomputer) {
-            System.out.println("humancom");
-            if (mode==false) {
-              if((int)(Math.random()+.5) == 0) {
-                Coordinate C = new Coordinate();
-                C.x=7;
-                C.y=7;
-                myGame.go(C);
-                repaint();
-              }
-            }
-            mode=true;
-          }
-      }
-      	public void mouseReleased(MouseEvent evt) { }
-      	public void mouseClicked(MouseEvent evt) { }
-      	public void mouseEntered(MouseEvent evt) { }
-      	public void mouseExited(MouseEvent evt) { }
-        public void mousePressed(MouseEvent evt) {
-       
-            int col = (evt.getX() - 2) / 20;
-            int row = (evt.getY() - 2) / 20;
-            if (col >= 0 && col < 15 && row >= 0 && row < 15) {
-              System.out.println("Before index = " + myGame.index);
-               doClickSquare(row,col);
-              System.out.println("After index = " + myGame.index);
+            return checkLD(C, n+1);
+        }
+        return n;
+    }
+    public int checkL(Coordinate C, int n){
+        if(C.x-n<=-1) return n;
+        if(gamegraph[C.x-n][C.y][index]==gamegraph[C.x][C.y][index]) {
+            
+            return checkL(C, n+1);
+        }
+        return n;
+    }
+    public int checkLU(Coordinate C, int n){
+        if(C.x-n<=-1 || C.y+n>=15) return n;
+        if(gamegraph[C.x-n][C.y+n][index]==gamegraph[C.x][C.y][index]) {
+            
+            return checkLU(C, n+1);
+        }
+        return n;
+    }
+    public int threatcheckLU(Coordinate C, int n, int color){
+        if(C.x-n<=-1 || C.y+n>=15) return n;
+        if(gamegraph[C.x-n][C.y+n][index]==gamegraph[C.x][C.y][index]) {
+            
+            return checkLU(C, n+1);
+        }        
+        if(gamegraph[C.x-n][C.y+n][index]== 0) {
+            
+            return checkLU(C, n+1);
+        }
+        return n;
+    }
+
+    //update threatspace
+    public void updatethreatspace(Coordinate C) {
+        //start by setting gamegraph[C.x][C.y] to zero
+        //so that we can re-use code
+        //int temp = gamegraph[C.x][C.y];
+        //gamegraph[C.x][C.y] = 0;
+
+
+    }
+
+
+    // Creates a move at coordinate C.
+    // Increment index, copy previous level to current level
+    // and pass turn to other player
+    public void go(Coordinate C){
+        if (over == true) {
+            return;
+        }
+        if (index != 0) {
+
+            // Disallow going in an occupied square
+            if(gamegraph[C.x][C.y][index-1] !=0) return;
+
+            // Copy level of previous level to current level
+            for (int row = 0 ; row < 15; row++)
+                for (int col=0;col<15;col++)
+                    gamegraph[row][col][index] = gamegraph[row][col][index-1];
+        }
+
+            // Fill location with 1 (black) or 2 (white) 
+            if (turn==false) gamegraph[C.x][C.y][index] = 1;
+            else if(turn==true) gamegraph[C.x][C.y][index] = 2;
+            //updatethreatspace();
+            if(bIsWin(C)) over = true;
+            index++;
+            turn=!turn;
+    }
+        
+    //undoes a move by resetting every member at the current index level to zero. updates index and player
+    public void undo(){
+        if(index == 0) return;
+        for(int j=0; j<15;j++) {
+            for (int k=0; k<15; k++) {
+                gamegraph[j][k][index-1]=0;
             }
         }
-      	public void doClickSquare(int row, int col) {
-      		Coordinate C = new Coordinate();
-      		C.x = row;
-      		C.y = col;
-       		myGame.go(C);
-          repaint();
-          if(mode==true) {
-            myGame.go(pickCentered(C.x,C.y));
-          }
-          repaint();
-          if(myGame.over == true) {
-            if(myGame.turn == true) 
-              message.setText("Game is over, black wins");
-            else message.setText("Game is over, white wins");
-          }
-
-        	}
-        public Coordinate pickCentered(int x, int y) {
-        Coordinate C = new Coordinate();
-        C.x = (int) (Math.random()*3) -1 + x;
-        C.y = (int) (Math.random()*3) -1 + y;
-            //System.out.println("Tried" + C.x + "," + C.y+".");
-            if((C.x <0 || C.x>14) || (C.y <0 || C.y>14)) return pickRandom();
-            //System.out.println("AfterArrayCheckIf");
-            if (myGame.gamegraph[C.x][C.y][myGame.index]==0)return C;
-        return pickCentered(C.x,C.y);
+        over = false;
+        index--;
+        turn=!turn;
     }
-        public Coordinate pickRandom() {
-        Coordinate C = new Coordinate();
-        C.x = (int) (Math.random()*15);
-        C.y = (int) (Math.random()*15);
-        if (myGame.gamegraph[C.x][C.y][myGame.index]==0)return C;
-        else return pickRandom();
-    }
-        public void paintComponent(Graphics g) {
-         
-         /* Draw a two-pixel black border around the edges of the canvas. */
-         
-        	g.setColor(Color.black);
-         	//g.drawRect(0,0,getSize().width-25,getSize().height-25);
-         	//0g.drawRect(1,1,getSize().width-25,getSize().height-25);
-         //Draw the squares of the checkerboard and the checkers. 
-         
-         	for (int row = 0; row < 15; row++) {
-            	for (int col = 0; col < 15; col++) {
-               		if ( row % 2 == col % 2 )
-                  		g.setColor(Color.LIGHT_GRAY);
-               		else
-                  		g.setColor(Color.GRAY);
-               		g.fillRect(col*20,row*20, 20, 20);
-               		if (myGame.index != 0) {
-               		switch (myGame.gamegraph[row][col][myGame.index-1]) {
-               			case 1:
-               			    g.setColor(Color.BLACK);
-                  			g.fillOval(4 + col*20, 4 + row*20, 15, 15);                  			
-                  			break;
-               			case 2:
-                  			g.setColor(Color.WHITE);
-                  			g.fillOval(4 + col*20, 4 + row*20, 15, 15);
-                  		break;
-              		}
-                }
+        
+        
+    /* serializes state */
+    public void save() {
+        FileOutputStream out = null;
+        
+        try {
+            out = new FileOutputStream("save.txt");
+            PrintWriter pw = new PrintWriter(out);
+            pw.println(over);
+            pw.println(turn);
+            pw.println(index);
+            
+            for (int i = 0; i < 255; i++) {
+                for (int x = 0; x < 15; x++) {
+                    for(int y = 0; y < 15; y++) {
+                        pw.println(gamegraph[x][y][i]);
+                    }
                 }
             }
-
+            out.close();
+        } catch (IOException e) {
+            System.out.println("Could not read from file");
         }
-         
-    }//end Board
+    }
+    
+    /* recovers state */
+    public void load() {
+        
+        
+        FileReader in = null;
+        try {
+            in = new FileReader("save.txt");
+            BufferedReader bfin = new BufferedReader(in);
+            over = bfin.readLine() != "0";
+            turn = bfin.readLine() != "0";
+            index = Integer.parseInt(bfin.readLine());
+            for (int i = 0; i < 200; i++) {
+                for (int x = 0; x < 15; x++) {
+                    for(int y = 0; y < 15; y++) {
+                        gamegraph[x][y][i] = Integer.parseInt(bfin.readLine());
+                    }
+                }
+            }
+            in.close();
+            
+        } catch (IOException e) {
+            System.out.println("Could not write to file");
+        }
+        
+    }
+    
+    //Construct a Gomoku object where X is playing first
+    public Gomoku(){
+        index = 0;
+        turn = false;
+        over = false;
+        gamegraph = new int[15][15][255];
+        blackthreatspace = new TreeSet<Coordinate>();
+        whitethreatspace = new TreeSet<Coordinate>();
+    }
+        
 }
-	
