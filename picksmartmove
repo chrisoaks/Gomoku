@@ -1,3 +1,0 @@
-picksmartmove
-game theoreticalgame=mygame //make sure you pass appropriately. or just steal the index and whatever else.
- define threatspace.  if index is less than 3, threatspace is middle 9, or maybe middle 16 spots
